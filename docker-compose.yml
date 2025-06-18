@@ -1,0 +1,47 @@
+---
+version: '3.8'
+
+services:
+  duckdns:
+    image: lscr.io/linuxserver/duckdns:latest
+    container_name: duckdns
+    network_mode: host  # optional
+    env_file: .env
+    environment:
+      - PUID=1000  # optional
+      - PGID=1000  # optional
+      - TZ=${TZ}
+      - SUBDOMAINS=${DUCKDNS_SUBDOMAIN}
+      - TOKEN=${DUCKDNS_TOKEN}
+      - UPDATE_IP=ipv4  # optional
+      - LOG_FILE=false  # optional
+    volumes:
+      - ./config:/config  # optional
+    restart: unless-stopped
+
+  wireguard:
+    image: lscr.io/linuxserver/wireguard:latest
+    container_name: wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE  # optional
+    env_file: .env
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=${TZ}
+      - SERVERURL=${DUCKDNS_SUBDOMAIN}.duckdns.org
+      - SERVERPORT=${SERVER_PORT:-51820}
+      - PEERS=${PEERS:-1}
+      - PEERDNS=${PEER_DNS:-auto}
+      - INTERNAL_SUBNET=${INTERNAL_SUBNET:-10.13.13.0}
+      - PERSISTENTKEEPALIVE_PEERS=${PERSISTENT_KEEPALIVE:-}
+      - LOG_CONFS=${LOG_CONFS:-true}
+    volumes:
+      - ./wireguard/config:/config
+      - ./modules:/lib/modules  # optional
+    ports:
+      - ${SERVER_PORT:-51820}:${SERVER_PORT:-51820}/udp
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
